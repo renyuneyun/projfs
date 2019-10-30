@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bimap = "0.4"
+dirs = "2.0"
 env_logger = "0.7"
 fuse_mt = "0.5"
 lazy_static = "1.4"

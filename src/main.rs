@@ -16,12 +16,28 @@ fn main() {
 
     let args: Vec<OsString> = env::args_os().collect();
 
-    if args.len() != 4 {
-        println!("Usage: {} <mountpoint> <source> <cache_dir>", &env::args().next().unwrap());
-        std::process::exit(-1);
-    }
+    let (source_dir, cache_dir) = match args.len() {
+        3 => {
+            if let Some(mut cache_dir) = dirs::cache_dir() {
+                cache_dir.push("projfs");
+                (args[2].clone(), cache_dir.into_os_string())
+            } else {
+                println!("Couldn't get cache directory automatically. Please explicitly specify a cache directory.");
+                std::process::exit(-1);
+            }
+        }
+        4 => {
+            (args[2].clone(), args[3].clone())
+        },
+        _ => {
+            println!("Usage: {} <mountpoint> <source_dir> [<cache_dir>]", &env::args().next().unwrap());
+            std::process::exit(-1);
+        }
+    };
 
-    let filesystem = projfs::ProjectionFS::new(args[2].clone(), args[3].clone());
+    info!("source_dir: {:?} :: cache_dir: {:?}", &source_dir, &cache_dir);
+
+    let filesystem = projfs::ProjectionFS::new(source_dir, cache_dir);
 
     let fuse_args: Vec<&OsStr> = vec![&OsStr::new("-o"), &OsStr::new("ro,auto_unmount")];
 
