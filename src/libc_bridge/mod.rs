@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-pub mod libc_extras;
+mod libc_extras;
 #[allow(dead_code)]
 pub mod libc_wrappers;
 
