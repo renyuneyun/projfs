@@ -19,7 +19,7 @@ It identifies files by MIME type (using the [mime_guess]() crate). All files are
 
 * [x] Having a default cache dir
 * [ ] Copying file attributes from source file (except for size)
-* [ ] Different cache dirs for different source dirs
+* [x] Different cache dirs for different source dirs
 * [ ] Update cache only when necessary
 * [ ] Return placeholder information for files under-projection
 * [ ] Accept configuration
