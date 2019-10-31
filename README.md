@@ -1,7 +1,7 @@
 # ***Proj***ection ***F***ile***S***ystem
 - - - - - - -
 
-Project an existing directory to a new mount point through a projection command.
+Project an existing directory to a new mount point -- convert specified files through a projection command.
 
 # Usage
 
@@ -23,8 +23,12 @@ It identifies files by MIME type (using the [mime_guess]() crate). All files are
 * [ ] Update cache only when necessary
 * [ ] Return placeholder information for files under-projection
 * [ ] Accept configuration
-* [ ] Background automatic async cache
+    * [ ] Custom filetype
+    * [ ] Custom projection command
+    * [ ] A list of configurations
 * [ ] One-to-many projection
+* [ ] Background automatic async cache
+* [ ] Validate configuration before loading
 
 # License
 
