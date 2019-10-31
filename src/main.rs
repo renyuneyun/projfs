@@ -1,6 +1,7 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::hash::{Hash, Hasher};
+use std::path::Path;
 
 #[macro_use]
 extern crate lazy_static;
@@ -14,7 +15,8 @@ mod fsop;
 mod libc_bridge;
 mod projfs;
 
-fn repr_of_path(path: &OsString) -> String {
+fn repr_of_path<T: AsRef<Path>>(path: T) -> String {
+    let path = path.as_ref();
     let mut hasher = SeaHasher::new();
     path.hash(&mut hasher);
     let hash: u64 = hasher.finish();
@@ -31,7 +33,12 @@ fn main() {
             if let Some(mut cache_dir) = dirs::cache_dir() {
                 let source_dir = args[2].clone();
                 cache_dir.push("projfs");
-                cache_dir.push(repr_of_path(&source_dir));
+                cache_dir.push(
+                    if let Ok(abs_path) = std::fs::canonicalize(&source_dir) {
+                        repr_of_path(&abs_path)
+                    } else {
+                        repr_of_path(&source_dir)
+                    });
                 (source_dir, cache_dir.into_os_string())
             } else {
                 println!("Couldn't get cache directory automatically. Please explicitly specify a cache directory.");
