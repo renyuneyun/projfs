@@ -4,9 +4,6 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 extern crate log;
 
 use seahash::SeaHasher;

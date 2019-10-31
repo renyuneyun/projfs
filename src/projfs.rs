@@ -44,36 +44,6 @@ impl AccessType {
     }
 }
 
-lazy_static! {
-    static ref PROJECTION: Mutex<BiMap<OsString, OsString>> = Mutex::new(BiMap::new());
-}
-
-fn projection_destination(filepath: &OsString) -> Option<OsString> {
-    match PROJECTION.lock().unwrap().get_by_left(filepath) {
-        Some(dest) => {
-            Some(dest.clone())
-        },
-        None => {
-            None
-        },
-    }
-}
-
-fn projection_source(filepath: &OsString) -> Option<OsString> {
-    match PROJECTION.lock().unwrap().get_by_right(filepath) {
-        Some(source) => {
-            Some(source.clone())
-        },
-        None => {
-            None
-        },
-    }
-}
-
-fn insert_projection(original: OsString, projected: OsString) {
-    PROJECTION.lock().unwrap().insert(original, projected);
-}
-
 
 fn should_project(mime_type: &Mime) -> bool {
     return mime_type.type_() == mime::AUDIO || mime_type.type_() == mime::VIDEO
@@ -98,6 +68,7 @@ fn filename_conv(partial: &Path) -> OsString {
 pub struct ProjectionFS {
     pub target: OsString,
     pub cache_dir: OsString,
+    pm: ProjectionManager,
 }
 
 impl ProjectionFS {
@@ -105,6 +76,7 @@ impl ProjectionFS {
         ProjectionFS {
             target: target,
             cache_dir: cache_dir,
+            pm: ProjectionManager::new(),
         }
     }
 
@@ -120,7 +92,7 @@ impl ProjectionFS {
 
     fn resolve<T: AsRef<Path>>(&self, partial: T) -> (AccessType, OsString) {
         let partial = partial.as_ref();
-        match projection_source(&partial.as_os_str().to_os_string()) {
+        match self.pm.source(&partial.as_os_str().to_os_string()) {
             Some(_source) => {
                 debug!("{:?} is a projected file", partial);
                 (AccessType::Projected, self.cache_path(partial))
@@ -140,14 +112,14 @@ impl ProjectionFS {
             },
             AccessType::Projected => {
                 let partial_os_string = partial.as_os_str().to_os_string();
-                match projection_destination(&partial_os_string) {
+                match self.pm.destination(&partial_os_string) {
                     Some(dest) => {
                         debug!("readdir file already projected {:?}", partial);
                         self.cache_path(dest)
                     },
                     None => {
                         let dest_partial = self.project(partial);
-                        insert_projection(partial_os_string, dest_partial.clone());
+                        self.pm.insert(partial_os_string, dest_partial.clone());
                         self.cache_path(dest_partial)
                     }
                 }
@@ -195,7 +167,7 @@ impl FilesystemMT for ProjectionFS {
                             Ok((TTL, stat))
                         },
                         AccessType::Projected => {
-                            match fsop::getattr(self.real_path(projection_source(&path.as_os_str().to_os_string()).unwrap())) {
+                            match fsop::getattr(self.real_path(self.pm.source(&path.as_os_str().to_os_string()).unwrap())) {
                                 Ok(mut stat_real) => {
                                     stat_real.size = stat.size;
                                     stat_real.blocks = stat.blocks;
@@ -349,3 +321,42 @@ impl FilesystemMT for ProjectionFS {
     }
 
 }
+
+struct ProjectionManager {
+    projection: Mutex<BiMap<OsString, OsString>>,
+}
+
+impl ProjectionManager {
+    fn new() -> ProjectionManager {
+        ProjectionManager {
+            projection: Mutex::new(BiMap::new())
+        }
+    }
+
+    fn destination(&self, filepath: &OsString) -> Option<OsString> {
+        match self.projection.lock().unwrap().get_by_left(filepath) {
+            Some(dest) => {
+                Some(dest.clone())
+            },
+            None => {
+                None
+            },
+        }
+    }
+
+    fn source(&self, filepath: &OsString) -> Option<OsString> {
+        match self.projection.lock().unwrap().get_by_right(filepath) {
+            Some(source) => {
+                Some(source.clone())
+            },
+            None => {
+                None
+            },
+        }
+    }
+
+    fn insert(&self, original: OsString, projected: OsString) {
+        self.projection.lock().unwrap().insert(original, projected);
+    }
+}
+
