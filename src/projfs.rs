@@ -66,15 +66,15 @@ fn filename_conv(partial: &Path) -> OsString {
 
 
 pub struct ProjectionFS {
-    pub target: OsString,
+    pub source_dir: OsString,
     pub cache_dir: OsString,
     pm: ProjectionManager,
 }
 
 impl ProjectionFS {
-    pub fn new(target: OsString, cache_dir: OsString) -> ProjectionFS {
+    pub fn new(source_dir: OsString, cache_dir: OsString) -> ProjectionFS {
         ProjectionFS {
-            target: target,
+            source_dir: source_dir,
             cache_dir: cache_dir,
             pm: ProjectionManager::new(),
         }
@@ -86,7 +86,7 @@ impl ProjectionFS {
         let dest_partial = Path::new(&filename_conv(partial)).to_owned();
         let dest = &self.cache_path(&dest_partial);
         fs::create_dir_all(Path::new(dest).parent().unwrap()).expect(&format!("cache directory {:?} can't be created", dest));
-        do_proj(&self.real_path(partial), dest);
+        do_proj(&self.source_path(partial), dest);
         dest_partial.as_os_str().to_os_string()
     }
 
@@ -99,16 +99,16 @@ impl ProjectionFS {
             },
             None => {
                 debug!("{:?} is a non-projected file", partial);
-                (AccessType::PassThrough, self.real_path(partial))
+                (AccessType::PassThrough, self.source_path(partial))
             },
         }
     }
 
-    fn conv_path_readdir(&self, dir_path: &Path, filename: &OsStr) -> OsString {
+    fn sniff_projection(&self, dir_path: &Path, filename: &OsStr) -> OsString {
         let partial = &PathBuf::from(dir_path).join(filename);
-        match AccessType::of(self.real_path(partial)) {
+        match AccessType::of(self.source_path(partial)) {
             AccessType::PassThrough => {
-                self.real_path(partial)
+                self.source_path(partial)
             },
             AccessType::Projected => {
                 let partial_os_string = partial.as_os_str().to_os_string();
@@ -127,8 +127,8 @@ impl ProjectionFS {
         }
     }
 
-    fn real_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
-        fsop::real_path(&self.target, partial.as_ref())
+    fn source_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
+        fsop::real_path(&self.source_dir, partial.as_ref())
     }
 
     fn cache_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
@@ -167,7 +167,7 @@ impl FilesystemMT for ProjectionFS {
                             Ok((TTL, stat))
                         },
                         AccessType::Projected => {
-                            match fsop::getattr(self.real_path(self.pm.source(&path.as_os_str().to_os_string()).unwrap())) {
+                            match fsop::getattr(self.source_path(self.pm.source(&path.as_os_str().to_os_string()).unwrap())) {
                                 Ok(mut stat_real) => {
                                     stat_real.size = stat.size;
                                     stat_real.blocks = stat.blocks;
@@ -193,7 +193,7 @@ impl FilesystemMT for ProjectionFS {
 
     //checked
     fn opendir(&self, _req: RequestInfo, path: &Path, _flags: u32) -> ResultOpen {
-        let real = self.real_path(path);
+        let real = self.source_path(path);
         debug!("opendir: {:?} (flags = {:#o})", real, _flags);
         match libc_wrappers::opendir(real) {
             Ok(fh) => Ok((fh, 0)),
@@ -240,8 +240,8 @@ impl FilesystemMT for ProjectionFS {
                         },
                         0 | _ => {
                             let entry_path = PathBuf::from(path).join(&name);
-                            let real_path = self.real_path(&entry_path);
-                            match libc_wrappers::lstat(real_path) {
+                            let source_path = self.source_path(&entry_path);
+                            match libc_wrappers::lstat(source_path) {
                                 Ok(stat64) => br::mode_to_filetype(stat64.st_mode),
                                 Err(errno) => {
                                     let ioerr = io::Error::from_raw_os_error(errno);
@@ -254,8 +254,8 @@ impl FilesystemMT for ProjectionFS {
 
                     info!("readdir() :: filename: {:?}", &name);
                     if filetype == FileType::RegularFile {
-                        let conv_path = self.conv_path_readdir(path, &name);
-                        let name = Path::new(&conv_path).file_name().unwrap().to_owned();
+                        let result_path = self.sniff_projection(path, &name);
+                        let name = Path::new(&result_path).file_name().unwrap().to_owned();
                         entries.push(DirectoryEntry {
                             name,
                             kind: filetype,
