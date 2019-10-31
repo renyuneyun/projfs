@@ -118,16 +118,16 @@ impl ProjectionFS {
         dest_partial.as_os_str().to_os_string()
     }
 
-    fn resolve<T: AsRef<Path>>(&self, partial: T) -> OsString {
+    fn resolve<T: AsRef<Path>>(&self, partial: T) -> (AccessType, OsString) {
         let partial = partial.as_ref();
         match projection_source(&partial.as_os_str().to_os_string()) {
             Some(_source) => {
                 debug!("{:?} is a projected file", partial);
-                self.cache_path(partial)
+                (AccessType::Projected, self.cache_path(partial))
             },
             None => {
                 debug!("{:?} is a non-projected file", partial);
-                self.real_path(partial)
+                (AccessType::PassThrough, self.real_path(partial))
             },
         }
     }
@@ -180,18 +180,35 @@ impl FilesystemMT for ProjectionFS {
     fn getattr(&self, _req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
         debug!("getattr: {:?} ({} filehandle)", path, if let Some(_) = fh {"with"} else {"without"});
 
-        if let Some(fh) = fh {
+        if let Some(fh) = fh { // Only used in setattr. Never used for read-only filesystem
             match libc_wrappers::fstat(fh) {
                 Ok(stat) => Ok((TTL, br::stat_to_fuse(stat))),
                 Err(e) => Err(e)
             }
         } else {
-            let real: OsString = self.resolve(path);
-            debug!("stat_real: {:?}", real);
+            let (access_type, real) = self.resolve(path);
 
-            match libc_wrappers::lstat(real) {
+            match fsop::getattr(real) {
                 Ok(stat) => {
-                    Ok((TTL, br::stat_to_fuse(stat)))
+                    match access_type {
+                        AccessType::PassThrough => {
+                            Ok((TTL, stat))
+                        },
+                        AccessType::Projected => {
+                            match fsop::getattr(self.real_path(projection_source(&path.as_os_str().to_os_string()).unwrap())) {
+                                Ok(mut stat_real) => {
+                                    stat_real.size = stat.size;
+                                    stat_real.blocks = stat.blocks;
+                                    Ok((TTL, stat_real))
+                                },
+                                Err(e) => {
+                                    let err = io::Error::from_raw_os_error(e);
+                                    error!("lstat({:?}): {}", path, err);
+                                    Err(err.raw_os_error().unwrap())
+                                }
+                            }
+                        },
+                    }
                 },
                 Err(e) => {
                     let err = io::Error::from_raw_os_error(e);
@@ -292,7 +309,7 @@ impl FilesystemMT for ProjectionFS {
     fn open(&self, _req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
         debug!("open: {:?} flags={:#x}", path, flags);
 
-        let real = self.resolve(path);
+        let (_, real) = self.resolve(path);
         match libc_wrappers::open(real, flags as libc::c_int) {
             Ok(fh) => Ok((fh, flags)),
             Err(e) => {

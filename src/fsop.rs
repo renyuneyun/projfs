@@ -4,10 +4,26 @@ use std::io::{self, Read, Seek, SeekFrom};
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
 
+use crate::libc_bridge::libc_wrappers;
+use crate::libc_bridge::libc::c_int;
+use crate::libc_bridge as br;
+use fuse_mt::FileAttr;
+
 pub fn real_path(target: &OsString, partial: &Path) -> OsString {
     PathBuf::from(target)
             .join(partial.strip_prefix("/").unwrap())
             .into_os_string()
+}
+
+pub fn getattr(path: OsString) -> Result<FileAttr, c_int> {
+    match libc_wrappers::lstat(path) {
+        Ok(stat) => {
+            Ok(br::stat_to_fuse(stat))
+        },
+        Err(e) => {
+            Err(e)
+        }
+    }
 }
 
 /// A file that is not closed upon leaving scope.

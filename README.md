@@ -18,7 +18,7 @@ It identifies files by MIME type (using the [mime_guess]() crate). All files are
 # TODO
 
 * [x] Having a default cache dir
-* [ ] Copying file attributes from source file (except for size)
+* [x] Copying file attributes from source file (except for size)
 * [x] Different cache dirs for different source dirs
 * [ ] Update cache only when necessary
 * [ ] Return placeholder information for files under-projection
