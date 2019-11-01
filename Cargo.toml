@@ -14,4 +14,5 @@ log = "0.4"
 mime_guess = "2.0"
 seahash = "3.0"
 time = "0.1"
+clap = {version = "~2.27.0", features = ["yaml"]}
 

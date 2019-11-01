@@ -1,0 +1,19 @@
+name: PROJection FileSystem
+version: "0.1"
+author: renyuneyun (Rui Zhao) <renyuneyun@gmail.com>
+about: Projection Filesystem
+args:
+    - cache:
+        short: c
+        long: cache
+        value_name: DIRECTORY
+        help: Set the cache directory to use
+    - MOUNTPOINT:
+        help: Sets the mountpoint
+        required: true
+        index: 1
+    - SOURCE_DIR:
+        help: Sets the source directory
+        required: true
+        index: 2
+
