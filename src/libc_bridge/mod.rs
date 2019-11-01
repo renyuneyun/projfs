@@ -15,9 +15,11 @@ pub fn mode_to_filetype(mode: libc::mode_t) -> FileType {
         libc::S_IFLNK => FileType::Symlink,
         libc::S_IFBLK => FileType::BlockDevice,
         libc::S_IFCHR => FileType::CharDevice,
-        libc::S_IFIFO  => FileType::NamedPipe,
+        libc::S_IFIFO => FileType::NamedPipe,
         libc::S_IFSOCK => FileType::Socket,
-        _ => { panic!("unknown file type"); }
+        _ => {
+            panic!("unknown file type");
+        }
     }
 }
 
@@ -29,9 +31,18 @@ pub fn stat_to_fuse(stat: libc::stat64) -> FileAttr {
     FileAttr {
         size: stat.st_size as u64,
         blocks: stat.st_blocks as u64,
-        atime: Timespec { sec: stat.st_atime as i64, nsec: stat.st_atime_nsec as i32 },
-        mtime: Timespec { sec: stat.st_mtime as i64, nsec: stat.st_mtime_nsec as i32 },
-        ctime: Timespec { sec: stat.st_ctime as i64, nsec: stat.st_ctime_nsec as i32 },
+        atime: Timespec {
+            sec: stat.st_atime as i64,
+            nsec: stat.st_atime_nsec as i32,
+        },
+        mtime: Timespec {
+            sec: stat.st_mtime as i64,
+            nsec: stat.st_mtime_nsec as i32,
+        },
+        ctime: Timespec {
+            sec: stat.st_ctime as i64,
+            nsec: stat.st_ctime_nsec as i32,
+        },
         crtime: Timespec { sec: 0, nsec: 0 },
         kind,
         perm,

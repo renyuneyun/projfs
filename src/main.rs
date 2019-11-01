@@ -36,12 +36,11 @@ fn main() {
     } else {
         if let Some(mut cache_dir) = dirs::cache_dir() {
             cache_dir.push("projfs");
-            cache_dir.push(
-                if let Ok(abs_path) = std::fs::canonicalize(&source_dir) {
-                    repr_of_path(&abs_path)
-                } else {
-                    repr_of_path(&source_dir)
-                });
+            cache_dir.push(if let Ok(abs_path) = std::fs::canonicalize(&source_dir) {
+                repr_of_path(&abs_path)
+            } else {
+                repr_of_path(&source_dir)
+            });
             cache_dir.into_os_string()
         } else {
             println!("Couldn't get cache directory automatically. Please explicitly specify a cache directory.");
@@ -49,9 +48,13 @@ fn main() {
         }
     };
 
-    info!("source_dir: {:?} :: cache_dir: {:?}", &source_dir, &cache_dir);
+    info!(
+        "source_dir: {:?} :: cache_dir: {:?}",
+        &source_dir, &cache_dir
+    );
 
-    let filesystem = projfs::ProjectionFS::new(OsString::from(source_dir), OsString::from(cache_dir));
+    let filesystem =
+        projfs::ProjectionFS::new(OsString::from(source_dir), OsString::from(cache_dir));
 
     let fuse_args: Vec<&OsStr> = vec![&OsStr::new("-o"), &OsStr::new("ro,auto_unmount")];
 

@@ -12,20 +12,25 @@ use mime_guess::{self, mime, Mime};
 use time::Timespec;
 
 use crate::fsop::{self, UnmanagedFile};
+use crate::libc_bridge as br;
 use crate::libc_bridge::libc;
 use crate::libc_bridge::libc_wrappers;
-use crate::libc_bridge as br;
 
 const TTL: Timespec = Timespec { sec: 1, nsec: 0 };
 
 fn _should_project(mime_type: &Mime) -> bool {
-    return mime_type.type_() == mime::AUDIO || mime_type.type_() == mime::VIDEO
+    return mime_type.type_() == mime::AUDIO || mime_type.type_() == mime::VIDEO;
 }
 
 fn _do_proj(input: &OsString, output: &OsString) {
     debug!("do_proj() call: {:?} -> {:?}", input, output);
     let mut cmd = Command::new("ffmpeg") // Streaming
-        .args(&["-i", input.as_os_str().to_str().unwrap(), "-vn", output.as_os_str().to_str().unwrap()])
+        .args(&[
+            "-i",
+            input.as_os_str().to_str().unwrap(),
+            "-vn",
+            output.as_os_str().to_str().unwrap(),
+        ])
         .spawn()
         .expect("failed to execute process");
     cmd.wait().unwrap();
@@ -36,7 +41,6 @@ fn _filename_conv(partial: &Path) -> OsString {
     path_buf.set_extension("ogg");
     path_buf.into_os_string()
 }
-
 
 trait ProjectionResolver {
     fn source(&self, partial: &Path) -> OsString;
@@ -64,33 +68,31 @@ impl ProjectionFS {
             Some(_source) => {
                 debug!("{:?} is a projected file", partial);
                 (AccessType::Projected, self.cache_path(partial))
-            },
+            }
             None => {
                 debug!("{:?} is a non-projected file", partial);
                 (AccessType::PassThrough, self.source_path(partial))
-            },
+            }
         }
     }
 
     fn sniff_projection(&self, dir_path: &Path, filename: &OsStr) -> OsString {
         let partial = &PathBuf::from(dir_path).join(filename);
         match self.pm.access_type(self.source_path(partial)) {
-            AccessType::PassThrough => {
-                self.source_path(partial)
-            },
+            AccessType::PassThrough => self.source_path(partial),
             AccessType::Projected => {
                 let partial_os_string = partial.as_os_str().to_os_string();
                 match self.pm.destination(&partial_os_string) {
                     Some(dest) => {
                         debug!("readdir file already projected {:?}", partial);
                         self.cache_path(dest)
-                    },
+                    }
                     None => {
                         let dest_partial = self.pm.project(partial, self);
                         self.cache_path(dest_partial)
                     }
                 }
-            },
+            }
         }
     }
 
@@ -101,7 +103,6 @@ impl ProjectionFS {
     fn cache_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
         self.cache(partial.as_ref())
     }
-
 }
 
 impl ProjectionResolver for ProjectionFS {
@@ -125,12 +126,17 @@ impl FilesystemMT for ProjectionFS {
     }
 
     fn getattr(&self, _req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
-        debug!("getattr: {:?} ({} filehandle)", path, if let Some(_) = fh {"with"} else {"without"});
+        debug!(
+            "getattr: {:?} ({} filehandle)",
+            path,
+            if let Some(_) = fh { "with" } else { "without" }
+        );
 
-        if let Some(fh) = fh { // Only used in setattr. Never used for read-only filesystem
+        if let Some(fh) = fh {
+            // Only used in setattr. Never used for read-only filesystem
             match libc_wrappers::fstat(fh) {
                 Ok(stat) => Ok((TTL, br::stat_to_fuse(stat))),
-                Err(e) => Err(e)
+                Err(e) => Err(e),
             }
         } else {
             let (access_type, real) = self.resolve(path);
@@ -138,25 +144,25 @@ impl FilesystemMT for ProjectionFS {
             match fsop::getattr(real) {
                 Ok(stat) => {
                     match access_type {
-                        AccessType::PassThrough => {
-                            Ok((TTL, stat))
-                        },
+                        AccessType::PassThrough => Ok((TTL, stat)),
                         AccessType::Projected => {
-                            match fsop::getattr(self.source_path(self.pm.source(&path.as_os_str().to_os_string()).unwrap())) {
+                            match fsop::getattr(self.source_path(
+                                self.pm.source(&path.as_os_str().to_os_string()).unwrap(),
+                            )) {
                                 Ok(mut stat_real) => {
                                     stat_real.size = stat.size;
                                     stat_real.blocks = stat.blocks;
                                     Ok((TTL, stat_real))
-                                },
+                                }
                                 Err(e) => {
                                     let err = io::Error::from_raw_os_error(e);
                                     error!("lstat({:?}): {}", path, err);
                                     Err(err.raw_os_error().unwrap())
                                 }
                             }
-                        },
+                        }
                     }
-                },
+                }
                 Err(e) => {
                     let err = io::Error::from_raw_os_error(e);
                     error!("lstat({:?}): {}", path, err);
@@ -212,7 +218,7 @@ impl FilesystemMT for ProjectionFS {
                         libc::DT_SOCK => {
                             warn!("FUSE doesn't support Socket file type; translating to NamedPipe instead.");
                             FileType::NamedPipe
-                        },
+                        }
                         0 | _ => {
                             let entry_path = PathBuf::from(path).join(&name);
                             let source_path = self.source_path(&entry_path);
@@ -241,8 +247,10 @@ impl FilesystemMT for ProjectionFS {
                             kind: filetype,
                         })
                     }
-                },
-                Ok(None) => { break; },
+                }
+                Ok(None) => {
+                    break;
+                }
                 Err(e) => {
                     error!("readdir: {:?}: {}", path, e);
                     return Err(e);
@@ -266,12 +274,28 @@ impl FilesystemMT for ProjectionFS {
         }
     }
 
-    fn release(&self, _req: RequestInfo, path: &Path, fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
+    fn release(
+        &self,
+        _req: RequestInfo,
+        path: &Path,
+        fh: u64,
+        _flags: u32,
+        _lock_owner: u64,
+        _flush: bool,
+    ) -> ResultEmpty {
         debug!("release: {:?}", path);
         libc_wrappers::close(fh)
     }
 
-    fn read(&self, _req: RequestInfo, path: &Path, fh: u64, offset: u64, size: u32, result: impl FnOnce(Result<&[u8], libc::c_int>)) {
+    fn read(
+        &self,
+        _req: RequestInfo,
+        path: &Path,
+        fh: u64,
+        offset: u64,
+        size: u32,
+        result: impl FnOnce(Result<&[u8], libc::c_int>),
+    ) {
         debug!("read: {:?} {:#x} @ {:#x}", path, size, offset);
         let mut file = unsafe { UnmanagedFile::new(fh) };
 
@@ -284,7 +308,9 @@ impl FilesystemMT for ProjectionFS {
             return;
         }
         match file.read(&mut data) {
-            Ok(n) => { data.truncate(n); },
+            Ok(n) => {
+                data.truncate(n);
+            }
             Err(e) => {
                 error!("read {:?}, {:#x} @ {:#x}: {}", path, size, offset, e);
                 result(Err(e.raw_os_error().unwrap()));
@@ -294,14 +320,13 @@ impl FilesystemMT for ProjectionFS {
 
         result(Ok(&data));
     }
-
 }
 
 struct ProjectionManager {
     projection: Mutex<BiMap<OsString, OsString>>,
-    should_project: fn (mime_type: &Mime) -> bool,
-    do_proj: fn (input: &OsString, output: &OsString),
-    filename_conv: fn (partial: &Path) -> OsString,
+    should_project: fn(mime_type: &Mime) -> bool,
+    do_proj: fn(input: &OsString, output: &OsString),
+    filename_conv: fn(partial: &Path) -> OsString,
 }
 
 impl ProjectionManager {
@@ -316,30 +341,25 @@ impl ProjectionManager {
 
     fn destination(&self, filepath: &OsString) -> Option<OsString> {
         match self.projection.lock().unwrap().get_by_left(filepath) {
-            Some(dest) => {
-                Some(dest.clone())
-            },
-            None => {
-                None
-            },
+            Some(dest) => Some(dest.clone()),
+            None => None,
         }
     }
 
     fn source(&self, filepath: &OsString) -> Option<OsString> {
         match self.projection.lock().unwrap().get_by_right(filepath) {
-            Some(source) => {
-                Some(source.clone())
-            },
-            None => {
-                None
-            },
+            Some(source) => Some(source.clone()),
+            None => None,
         }
     }
 
     fn access_type<T: AsRef<Path>>(&self, file_path: T) -> AccessType {
         let file_path = file_path.as_ref();
         if file_path.is_dir() {
-            error!("atype() shouldn't be called on a directory ({:?})", file_path);
+            error!(
+                "atype() shouldn't be called on a directory ({:?})",
+                file_path
+            );
         }
         let guess = mime_guess::from_path(file_path);
         if guess.is_empty() {
@@ -361,8 +381,12 @@ impl ProjectionManager {
         let source_partial = partial.as_ref();
         let dest_partial = &Path::new(&(self.filename_conv)(source_partial)).to_owned();
         let dest = &resolver.cache(dest_partial);
-        fs::create_dir_all(Path::new(dest).parent().unwrap()).expect(&format!("cache directory {:?} can't be created", dest));
-        self.projection.lock().unwrap().insert(OsString::from(source_partial), OsString::from(dest_partial));
+        fs::create_dir_all(Path::new(dest).parent().unwrap())
+            .expect(&format!("cache directory {:?} can't be created", dest));
+        self.projection
+            .lock()
+            .unwrap()
+            .insert(OsString::from(source_partial), OsString::from(dest_partial));
         (self.do_proj)(&resolver.source(source_partial), dest);
         dest_partial.as_os_str().to_os_string()
     }
