@@ -16,40 +16,13 @@ use crate::libc_bridge::libc;
 use crate::libc_bridge::libc_wrappers;
 use crate::libc_bridge as br;
 
-#[derive(Debug)]
-enum AccessType {
-    Projected,
-    PassThrough,
-}
+const TTL: Timespec = Timespec { sec: 1, nsec: 0 };
 
-impl AccessType {
-    fn of<T: AsRef<Path>>(file_path: T) -> AccessType {
-        let file_path = file_path.as_ref();
-        if file_path.is_dir() {
-            error!("atype() shouldn't be called on a directory ({:?})", file_path);
-        }
-        let guess = mime_guess::from_path(file_path);
-        if guess.is_empty() {
-            warn!("MIME for filepath {} can't guess", file_path.display());
-            AccessType::PassThrough
-        } else {
-            let first_guess = guess.first().unwrap();
-            info!("MIME for {:?} is {}", file_path, first_guess);
-            if should_project(&first_guess) {
-                AccessType::Projected
-            } else {
-                AccessType::PassThrough
-            }
-        }
-    }
-}
-
-
-fn should_project(mime_type: &Mime) -> bool {
+fn _should_project(mime_type: &Mime) -> bool {
     return mime_type.type_() == mime::AUDIO || mime_type.type_() == mime::VIDEO
 }
 
-fn do_proj(input: &OsString, output: &OsString) {
+fn _do_proj(input: &OsString, output: &OsString) {
     debug!("do_proj() call: {:?} -> {:?}", input, output);
     let mut cmd = Command::new("ffmpeg") // Streaming
         .args(&["-i", input.as_os_str().to_str().unwrap(), "-vn", output.as_os_str().to_str().unwrap()])
@@ -58,12 +31,17 @@ fn do_proj(input: &OsString, output: &OsString) {
     cmd.wait().unwrap();
 }
 
-fn filename_conv(partial: &Path) -> OsString {
+fn _filename_conv(partial: &Path) -> OsString {
     let mut path_buf = partial.to_path_buf();
     path_buf.set_extension("ogg");
     path_buf.into_os_string()
 }
 
+
+trait ProjectionResolver {
+    fn source(&self, partial: &Path) -> OsString;
+    fn cache(&self, partial: &Path) -> OsString;
+}
 
 pub struct ProjectionFS {
     pub source_dir: OsString,
@@ -78,16 +56,6 @@ impl ProjectionFS {
             cache_dir: cache_dir,
             pm: ProjectionManager::new(),
         }
-    }
-
-    /// parameter `partial` is the relative partial path, pointing to the *file* to be projected
-    fn project<T: AsRef<Path>>(&self, partial: T) -> OsString {
-        let partial = partial.as_ref();
-        let dest_partial = Path::new(&filename_conv(partial)).to_owned();
-        let dest = &self.cache_path(&dest_partial);
-        fs::create_dir_all(Path::new(dest).parent().unwrap()).expect(&format!("cache directory {:?} can't be created", dest));
-        do_proj(&self.source_path(partial), dest);
-        dest_partial.as_os_str().to_os_string()
     }
 
     fn resolve<T: AsRef<Path>>(&self, partial: T) -> (AccessType, OsString) {
@@ -106,7 +74,7 @@ impl ProjectionFS {
 
     fn sniff_projection(&self, dir_path: &Path, filename: &OsStr) -> OsString {
         let partial = &PathBuf::from(dir_path).join(filename);
-        match AccessType::of(self.source_path(partial)) {
+        match self.pm.access_type(self.source_path(partial)) {
             AccessType::PassThrough => {
                 self.source_path(partial)
             },
@@ -118,8 +86,7 @@ impl ProjectionFS {
                         self.cache_path(dest)
                     },
                     None => {
-                        let dest_partial = self.project(partial);
-                        self.pm.insert(partial_os_string, dest_partial.clone());
+                        let dest_partial = self.pm.project(partial, self);
                         self.cache_path(dest_partial)
                     }
                 }
@@ -128,16 +95,24 @@ impl ProjectionFS {
     }
 
     fn source_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
-        fsop::real_path(&self.source_dir, partial.as_ref())
+        self.source(partial.as_ref())
     }
 
     fn cache_path<T: AsRef<Path>>(&self, partial: T) -> OsString {
-        fsop::real_path(&self.cache_dir, partial.as_ref())
+        self.cache(partial.as_ref())
     }
 
 }
 
-const TTL: Timespec = Timespec { sec: 1, nsec: 0 };
+impl ProjectionResolver for ProjectionFS {
+    fn source(&self, partial: &Path) -> OsString {
+        fsop::real_path(&self.source_dir, partial)
+    }
+
+    fn cache(&self, partial: &Path) -> OsString {
+        fsop::real_path(&self.cache_dir, partial)
+    }
+}
 
 impl FilesystemMT for ProjectionFS {
     fn init(&self, _req: RequestInfo) -> ResultEmpty {
@@ -324,12 +299,18 @@ impl FilesystemMT for ProjectionFS {
 
 struct ProjectionManager {
     projection: Mutex<BiMap<OsString, OsString>>,
+    should_project: fn (mime_type: &Mime) -> bool,
+    do_proj: fn (input: &OsString, output: &OsString),
+    filename_conv: fn (partial: &Path) -> OsString,
 }
 
 impl ProjectionManager {
     fn new() -> ProjectionManager {
         ProjectionManager {
-            projection: Mutex::new(BiMap::new())
+            projection: Mutex::new(BiMap::new()),
+            should_project: _should_project,
+            do_proj: _do_proj,
+            filename_conv: _filename_conv,
         }
     }
 
@@ -355,8 +336,40 @@ impl ProjectionManager {
         }
     }
 
-    fn insert(&self, original: OsString, projected: OsString) {
-        self.projection.lock().unwrap().insert(original, projected);
+    fn access_type<T: AsRef<Path>>(&self, file_path: T) -> AccessType {
+        let file_path = file_path.as_ref();
+        if file_path.is_dir() {
+            error!("atype() shouldn't be called on a directory ({:?})", file_path);
+        }
+        let guess = mime_guess::from_path(file_path);
+        if guess.is_empty() {
+            warn!("MIME for filepath {} can't guess", file_path.display());
+            AccessType::PassThrough
+        } else {
+            let first_guess = guess.first().unwrap();
+            info!("MIME for {:?} is {}", file_path, first_guess);
+            if (self.should_project)(&first_guess) {
+                AccessType::Projected
+            } else {
+                AccessType::PassThrough
+            }
+        }
+    }
+
+    /// parameter `partial` is the relative partial path, pointing to the *file* to be projected
+    fn project<T: AsRef<Path>>(&self, partial: T, resolver: &dyn ProjectionResolver) -> OsString {
+        let source_partial = partial.as_ref();
+        let dest_partial = &Path::new(&(self.filename_conv)(source_partial)).to_owned();
+        let dest = &resolver.cache(dest_partial);
+        fs::create_dir_all(Path::new(dest).parent().unwrap()).expect(&format!("cache directory {:?} can't be created", dest));
+        self.projection.lock().unwrap().insert(OsString::from(source_partial), OsString::from(dest_partial));
+        (self.do_proj)(&resolver.source(source_partial), dest);
+        dest_partial.as_os_str().to_os_string()
     }
 }
 
+#[derive(Debug)]
+enum AccessType {
+    Projected,
+    PassThrough,
+}
