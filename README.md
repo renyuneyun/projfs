@@ -5,15 +5,27 @@ Project an existing directory to a new mount point -- convert specified files th
 
 # Usage
 
+## Basic usage
+
 ```
-cargo run <mountpoint> <source> <cache_dir>
+cargo run <source> <mountpoint>
 ```
 
 The `<mountpoint>` is where the new projected filesystem hierarchy will appear. It is (apparently) read-only.
 
-Currently, the program performs the projection by using `ffmpeg` to convert every audio and video file to `ogg` file (audio).
+By default, the program performs the projection by using `ffmpeg` to convert every audio and video file to `ogg` file (audio).
 
-It identifies files by MIME type (using the [mime_guess]() crate). All files are provided as-is except for `audio/*` and `video/*` files which are going to be projected. The command used to convert is `ffmpeg -i <original_file> -vn <output_file>`. File suffix is changed to `ogg` where applicable.
+It identifies files by MIME type (using the `mime_guess` crate). All files are provided as-is except for `audio/*` and `video/*` files which are going to be projected. The command used to convert is `ffmpeg -i <original_file> -vn <output_file>`. File suffix is changed to `ogg` where applicable.
+
+## Advanced usage
+
+Please see the help document using:
+
+```
+cargo run --help
+```
+
+An example projection specification is available in `example_projection.yml`. It also corresponds to the default behaviour.
 
 # TODO
 
