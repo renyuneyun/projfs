@@ -1,0 +1,3 @@
+mime_types: ["audio/", "video/"]
+name_mapping: ".ogg"
+projection_command: "ffmpeg -i {input} -vn {output}"

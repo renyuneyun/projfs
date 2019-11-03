@@ -3,44 +3,20 @@ use std::fs::{self};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::Mutex;
 
 use bimap::BiMap;
 use fuse_mt::*;
-use mime_guess::{self, mime, Mime};
+use mime_guess;
 use time::Timespec;
 
+use crate::config::ProjectionConfig;
 use crate::fsop::{self, UnmanagedFile};
 use crate::libc_bridge as br;
 use crate::libc_bridge::libc;
 use crate::libc_bridge::libc_wrappers;
 
 const TTL: Timespec = Timespec { sec: 1, nsec: 0 };
-
-fn _should_project(mime_type: &Mime) -> bool {
-    return mime_type.type_() == mime::AUDIO || mime_type.type_() == mime::VIDEO;
-}
-
-fn _do_proj(input: &OsString, output: &OsString) {
-    debug!("do_proj() call: {:?} -> {:?}", input, output);
-    let mut cmd = Command::new("ffmpeg") // Streaming
-        .args(&[
-            "-i",
-            input.as_os_str().to_str().unwrap(),
-            "-vn",
-            output.as_os_str().to_str().unwrap(),
-        ])
-        .spawn()
-        .expect("failed to execute process");
-    cmd.wait().unwrap();
-}
-
-fn _filename_conv(partial: &Path) -> OsString {
-    let mut path_buf = partial.to_path_buf();
-    path_buf.set_extension("ogg");
-    path_buf.into_os_string()
-}
 
 trait ProjectionResolver {
     fn source(&self, partial: &Path) -> OsString;
@@ -54,11 +30,11 @@ pub struct ProjectionFS {
 }
 
 impl ProjectionFS {
-    pub fn new(source_dir: OsString, cache_dir: OsString) -> ProjectionFS {
+    pub fn new(source_dir: OsString, cache_dir: OsString, conf: ProjectionConfig) -> ProjectionFS {
         ProjectionFS {
             source_dir: source_dir,
             cache_dir: cache_dir,
-            pm: ProjectionManager::new(),
+            pm: ProjectionManager::new(conf),
         }
     }
 
@@ -324,18 +300,14 @@ impl FilesystemMT for ProjectionFS {
 
 struct ProjectionManager {
     projection: Mutex<BiMap<OsString, OsString>>,
-    should_project: fn(mime_type: &Mime) -> bool,
-    do_proj: fn(input: &OsString, output: &OsString),
-    filename_conv: fn(partial: &Path) -> OsString,
+    config: ProjectionConfig,
 }
 
 impl ProjectionManager {
-    fn new() -> ProjectionManager {
+    fn new(config: ProjectionConfig) -> ProjectionManager {
         ProjectionManager {
             projection: Mutex::new(BiMap::new()),
-            should_project: _should_project,
-            do_proj: _do_proj,
-            filename_conv: _filename_conv,
+            config: config,
         }
     }
 
@@ -353,6 +325,10 @@ impl ProjectionManager {
         }
     }
 
+    fn insert(&self, input: OsString, output: OsString) {
+        self.projection.lock().unwrap().insert(input, output);
+    }
+
     fn access_type<T: AsRef<Path>>(&self, file_path: T) -> AccessType {
         let file_path = file_path.as_ref();
         if file_path.is_dir() {
@@ -368,7 +344,7 @@ impl ProjectionManager {
         } else {
             let first_guess = guess.first().unwrap();
             info!("MIME for {:?} is {}", file_path, first_guess);
-            if (self.should_project)(&first_guess) {
+            if self.config.should_project(&first_guess) {
                 AccessType::Projected
             } else {
                 AccessType::PassThrough
@@ -379,15 +355,12 @@ impl ProjectionManager {
     /// parameter `partial` is the relative partial path, pointing to the *file* to be projected
     fn project<T: AsRef<Path>>(&self, partial: T, resolver: &dyn ProjectionResolver) -> OsString {
         let source_partial = partial.as_ref();
-        let dest_partial = &Path::new(&(self.filename_conv)(source_partial)).to_owned();
+        let dest_partial = &Path::new(&self.config.convert_filename(source_partial)).to_owned();
         let dest = &resolver.cache(dest_partial);
         fs::create_dir_all(Path::new(dest).parent().unwrap())
             .expect(&format!("cache directory {:?} can't be created", dest));
-        self.projection
-            .lock()
-            .unwrap()
-            .insert(OsString::from(source_partial), OsString::from(dest_partial));
-        (self.do_proj)(&resolver.source(source_partial), dest);
+        self.insert(OsString::from(source_partial), OsString::from(dest_partial));
+        self.config.project(&resolver.source(source_partial), dest);
         dest_partial.as_os_str().to_os_string()
     }
 }

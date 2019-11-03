@@ -1,19 +1,26 @@
 name: PROJection FileSystem
-version: "0.1"
+version: "0.1.0"
 author: renyuneyun (Rui Zhao) <renyuneyun@gmail.com>
-about: Projection Filesystem
+about: Project an existing directory to a new mount point -- convert specified files through a projection command.
+
 args:
+    - projection:
+        short: p
+        long: projection
+        value_name: FILE
+        help: Loads the projection configuration from file
+        takes_value: true
     - cache:
         short: c
         long: cache
         value_name: DIRECTORY
-        help: Set the cache directory to use
-    - MOUNTPOINT:
-        help: Sets the mountpoint
-        required: true
-        index: 1
+        help: Sets the cache directory to use
     - SOURCE_DIR:
         help: Sets the source directory
+        required: true
+        index: 1
+    - MOUNTPOINT:
+        help: Sets the mountpoint
         required: true
         index: 2
 

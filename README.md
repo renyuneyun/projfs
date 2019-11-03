@@ -22,9 +22,9 @@ It identifies files by MIME type (using the [mime_guess]() crate). All files are
 * [x] Different cache dirs for different source dirs
 * [ ] Update cache only when necessary
 * [ ] Return placeholder information for files under-projection
-* [ ] Accept configuration
-    * [ ] Custom filetype
-    * [ ] Custom projection command
+* [x] Accept configuration
+    * [x] Custom filetype
+    * [x] Custom projection command
     * [ ] A list of configurations
 * [ ] One-to-many projection
 * [ ] Background automatic async cache

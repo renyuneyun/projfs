@@ -11,6 +11,7 @@ extern crate log;
 use clap::App;
 use seahash::SeaHasher;
 
+mod config;
 mod fsop;
 mod libc_bridge;
 mod projfs;
@@ -47,14 +48,30 @@ fn main() {
             std::process::exit(-1);
         }
     };
+    let proj_conf = if let Some(conf_file) = matches.value_of_os("projection") {
+        debug!("loading projection config from file {:?}", conf_file);
+        if let Some(conf) = config::load(conf_file) {
+            conf
+        } else {
+            std::process::exit(-1);
+        }
+    } else {
+        debug!("use default projection");
+        config::default()
+    };
+
+    info!("projection loaded @ {:p}", &proj_conf);
 
     info!(
         "source_dir: {:?} :: cache_dir: {:?}",
         &source_dir, &cache_dir
     );
 
-    let filesystem =
-        projfs::ProjectionFS::new(OsString::from(source_dir), OsString::from(cache_dir));
+    let filesystem = projfs::ProjectionFS::new(
+        OsString::from(source_dir),
+        OsString::from(cache_dir),
+        proj_conf,
+    );
 
     let fuse_args: Vec<&OsStr> = vec![&OsStr::new("-o"), &OsStr::new("ro,auto_unmount")];
 
