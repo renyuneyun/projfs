@@ -32,7 +32,7 @@ An example projection specification is available in `example_projection.yml`. It
 * [x] Having a default cache dir
 * [x] Copying file attributes from source file (except for size)
 * [x] Different cache dirs for different source dirs
-* [ ] Update cache only when necessary
+* [x] Update cache only when necessary
 * [ ] Return placeholder information for files under-projection
 * [x] Accept configuration
     * [x] Custom filetype
@@ -40,6 +40,7 @@ An example projection specification is available in `example_projection.yml`. It
     * [ ] A list of configurations
 * [ ] One-to-many projection
 * [ ] Background automatic async cache
+* [ ] Update cache while running
 * [ ] Validate configuration before loading
 
 # License

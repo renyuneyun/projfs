@@ -22,6 +22,12 @@ pub fn getattr(path: OsString) -> Result<FileAttr, c_int> {
     }
 }
 
+/// Test if the content of the `file` is newer than the `target`.
+/// This functions checks the file modification time.
+pub fn is_content_newer(target: OsString, file: OsString) -> Result<bool, c_int> {
+    Ok(getattr(target)?.mtime < getattr(file)?.mtime)
+}
+
 /// A file that is not closed upon leaving scope.
 pub struct UnmanagedFile {
     inner: Option<File>,

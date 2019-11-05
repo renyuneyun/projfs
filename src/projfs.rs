@@ -357,10 +357,27 @@ impl ProjectionManager {
         let source_partial = partial.as_ref();
         let dest_partial = &Path::new(&self.config.convert_filename(source_partial)).to_owned();
         let dest = &resolver.cache(dest_partial);
-        fs::create_dir_all(Path::new(dest).parent().unwrap())
-            .expect(&format!("cache directory {:?} can't be created", dest));
         self.insert(OsString::from(source_partial), OsString::from(dest_partial));
-        self.config.project(&resolver.source(source_partial), dest);
+        let source = &resolver.source(source_partial);
+        let dest_path = Path::new(dest);
+        let exists = dest_path.exists();
+        let needs_project = {
+            if !exists {
+                fs::create_dir_all(Path::new(dest).parent().unwrap())
+                    .expect(&format!("cache directory {:?} can't be created", dest));
+                true
+            } else {
+                fsop::is_content_newer(dest.clone(), source.clone()).unwrap()
+            }
+        };
+        if needs_project {
+            if exists {
+                if let Err(e) = fs::remove_file(dest_path) {
+                    error!("{}", e);
+                }
+            }
+            self.config.project(source, dest);
+        }
         dest_partial.as_os_str().to_os_string()
     }
 }
