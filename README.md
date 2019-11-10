@@ -1,7 +1,9 @@
 # ***Proj***ection ***F***ile***S***ystem [![Build Status](https://travis-ci.org/renyuneyun/projfs.svg?branch=master)](https://travis-ci.org/renyuneyun/projfs)
 - - - - - - -
 
-Project an existing directory to a new mount point -- convert specified files through a projection command.
+ProjFS is a FUSE filesystem aiming at providing a general way of doing filesystem projection: project directories and files to a new mount point by converting specified files through a custom projection command.
+
+It can provide use cases such as automatically converting audio files while keeping the original file.
 
 # Usage
 
