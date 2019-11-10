@@ -1,4 +1,4 @@
-# ***Proj***ection ***F***ile***S***ystem
+# ***Proj***ection ***F***ile***S***ystem [![Build Status](https://travis-ci.org/renyuneyun/projfs.svg?branch=master)](https://travis-ci.org/renyuneyun/projfs)
 - - - - - - -
 
 Project an existing directory to a new mount point -- convert specified files through a projection command.
