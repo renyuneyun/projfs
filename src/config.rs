@@ -6,6 +6,14 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::process::Command;
 
+pub trait ProjectionSpecification: Send + Sync {
+    fn should_project(&self, mime: &Mime) -> bool;
+
+    fn convert_filename(&self, filename: &OsStr) -> OsString;
+
+    fn project(&self, input: &OsStr, output: &OsStr);
+}
+
 fn user_string_to_mime(string_mime_types: &Vec<String>) -> Vec<Mime> {
     let mut mime_types = Vec::new();
     for mime in string_mime_types {
@@ -41,7 +49,7 @@ struct PlainConfig {
     projection_command: String,
 }
 
-pub struct ProjectionConfig {
+struct ProjectionConfig {
     mime_types: Vec<Mime>,
     ignored_mime_types: Vec<Mime>,
     name_mapping: Box<dyn Fn(&OsStr) -> OsString + Sync + Send>,
@@ -51,7 +59,8 @@ pub struct ProjectionConfig {
 impl From<PlainConfig> for ProjectionConfig {
     fn from(plain: PlainConfig) -> Self {
         let mime_types = user_string_to_mime(plain.mime_types.as_ref());
-        let ignored_mime_types = user_string_to_mime(plain.ignored_mime_types.as_ref().unwrap_or(&Vec::new()));
+        let ignored_mime_types =
+            user_string_to_mime(plain.ignored_mime_types.as_ref().unwrap_or(&Vec::new()));
         let _name_mapping = {
             let mapping = &(&plain).name_mapping;
             if mapping.starts_with(".") {
@@ -92,21 +101,21 @@ impl From<PlainConfig> for ProjectionConfig {
     }
 }
 
-impl ProjectionConfig {
-    pub fn should_project(&self, mime: &Mime) -> bool {
+impl ProjectionSpecification for ProjectionConfig {
+    fn should_project(&self, mime: &Mime) -> bool {
         !in_mime_vec(mime, &self.ignored_mime_types) && in_mime_vec(mime, &self.mime_types)
     }
 
-    pub fn convert_filename<T: AsRef<OsStr>>(&self, filename: T) -> OsString {
+    fn convert_filename(&self, filename: &OsStr) -> OsString {
         return (self.name_mapping)(filename.as_ref());
     }
 
-    pub fn project(&self, input: &OsStr, output: &OsStr) {
+    fn project(&self, input: &OsStr, output: &OsStr) {
         (self.projection_command)(input, output)
     }
 }
 
-pub fn load(filename: &OsStr) -> Option<ProjectionConfig> {
+pub fn load(filename: &OsStr) -> Option<Box<dyn ProjectionSpecification>> {
     let f = match File::open(filename) {
         Ok(f) => f,
         Err(e) => {
@@ -127,10 +136,10 @@ pub fn load(filename: &OsStr) -> Option<ProjectionConfig> {
             return None;
         }
     };
-    Some(ProjectionConfig::from(plain_config))
+    Some(Box::new(ProjectionConfig::from(plain_config)))
 }
 
-pub fn default() -> ProjectionConfig {
+pub fn default() -> Box<dyn ProjectionSpecification> {
     fn _filename_conv(partial: &OsStr) -> OsString {
         let mut path_buf = PathBuf::from(partial);
         path_buf.set_extension("ogg");
@@ -149,10 +158,10 @@ pub fn default() -> ProjectionConfig {
             .expect("failed to execute process");
         cmd.wait().unwrap();
     }
-    ProjectionConfig {
+    Box::new(ProjectionConfig {
         mime_types: vec!["audio/".parse().unwrap(), "video/".parse().unwrap()],
         ignored_mime_types: Vec::new(),
         name_mapping: Box::new(_filename_conv),
         projection_command: Box::new(_do_proj),
-    }
+    })
 }

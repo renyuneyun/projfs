@@ -10,7 +10,7 @@ use fuse_mt::*;
 use mime_guess;
 use time::Timespec;
 
-use crate::config::ProjectionConfig;
+use crate::config::ProjectionSpecification;
 use crate::fsop::{self, UnmanagedFile};
 use crate::libc_bridge as br;
 use crate::libc_bridge::libc;
@@ -30,7 +30,11 @@ pub struct ProjectionFS {
 }
 
 impl ProjectionFS {
-    pub fn new(source_dir: OsString, cache_dir: OsString, conf: ProjectionConfig) -> ProjectionFS {
+    pub fn new(
+        source_dir: OsString,
+        cache_dir: OsString,
+        conf: Box<dyn ProjectionSpecification>,
+    ) -> ProjectionFS {
         ProjectionFS {
             source_dir: source_dir,
             cache_dir: cache_dir,
@@ -300,14 +304,14 @@ impl FilesystemMT for ProjectionFS {
 
 struct ProjectionManager {
     projection: Mutex<BiMap<OsString, OsString>>,
-    config: ProjectionConfig,
+    spec: Box<dyn ProjectionSpecification>,
 }
 
 impl ProjectionManager {
-    fn new(config: ProjectionConfig) -> ProjectionManager {
+    fn new(spec: Box<dyn ProjectionSpecification>) -> ProjectionManager {
         ProjectionManager {
             projection: Mutex::new(BiMap::new()),
-            config: config,
+            spec: spec,
         }
     }
 
@@ -344,7 +348,7 @@ impl ProjectionManager {
         } else {
             let first_guess = guess.first().unwrap();
             info!("MIME for {:?} is {}", file_path, first_guess);
-            if self.config.should_project(&first_guess) {
+            if self.spec.should_project(&first_guess) {
                 AccessType::Projected
             } else {
                 AccessType::PassThrough
@@ -355,7 +359,8 @@ impl ProjectionManager {
     /// parameter `partial` is the relative partial path, pointing to the *file* to be projected
     fn project<T: AsRef<Path>>(&self, partial: T, resolver: &dyn ProjectionResolver) -> OsString {
         let source_partial = partial.as_ref();
-        let dest_partial = &Path::new(&self.config.convert_filename(source_partial)).to_owned();
+        let dest_partial =
+            &Path::new(&self.spec.convert_filename(source_partial.as_ref())).to_owned();
         let dest = &resolver.cache(dest_partial);
         self.insert(OsString::from(source_partial), OsString::from(dest_partial));
         let source = &resolver.source(source_partial);
@@ -376,7 +381,7 @@ impl ProjectionManager {
                     error!("{}", e);
                 }
             }
-            self.config.project(source, dest);
+            self.spec.project(source, dest);
         }
         dest_partial.as_os_str().to_os_string()
     }
