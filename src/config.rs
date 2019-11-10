@@ -6,31 +6,52 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::process::Command;
 
+fn user_string_to_mime(string_mime_types: &Vec<String>) -> Vec<Mime> {
+    let mut mime_types = Vec::new();
+    for mime in string_mime_types {
+        let mut mime = mime.to_owned();
+        if !mime.contains("/") {
+            mime.push('/');
+        } else if mime.ends_with("/*") {
+            mime.pop();
+        }
+        mime_types.push(mime.parse().unwrap());
+    }
+    mime_types
+}
+
+fn in_mime_vec(mime: &Mime, mime_types: &Vec<Mime>) -> bool {
+    for m in mime_types {
+        if mime.type_() == m.type_() {
+            if m.subtype() == "" {
+                return true;
+            } else {
+                return mime.subtype() == m.subtype();
+            }
+        }
+    }
+    false
+}
+
 #[derive(Debug, PartialEq, Deserialize)]
 struct PlainConfig {
     mime_types: Vec<String>,
+    ignored_mime_types: Option<Vec<String>>,
     name_mapping: String,
     projection_command: String,
 }
 
 pub struct ProjectionConfig {
     mime_types: Vec<Mime>,
+    ignored_mime_types: Vec<Mime>,
     name_mapping: Box<dyn Fn(&OsStr) -> OsString + Sync + Send>,
     projection_command: Box<dyn Fn(&OsStr, &OsStr) + Sync + Send>,
 }
 
 impl From<PlainConfig> for ProjectionConfig {
     fn from(plain: PlainConfig) -> Self {
-        let mut mime_types = Vec::new();
-        for mime in &plain.mime_types {
-            let mut mime = mime.to_owned();
-            if !mime.contains("/") {
-                mime.push('/');
-            } else if mime.ends_with("/*") {
-                mime.pop();
-            }
-            mime_types.push(mime.parse().unwrap());
-        }
+        let mime_types = user_string_to_mime(plain.mime_types.as_ref());
+        let ignored_mime_types = user_string_to_mime(plain.ignored_mime_types.as_ref().unwrap_or(&Vec::new()));
         let _name_mapping = {
             let mapping = &(&plain).name_mapping;
             if mapping.starts_with(".") {
@@ -64,6 +85,7 @@ impl From<PlainConfig> for ProjectionConfig {
         };
         ProjectionConfig {
             mime_types: mime_types,
+            ignored_mime_types: ignored_mime_types,
             name_mapping: Box::new(name_mapping),
             projection_command: Box::new(projection_command),
         }
@@ -72,16 +94,7 @@ impl From<PlainConfig> for ProjectionConfig {
 
 impl ProjectionConfig {
     pub fn should_project(&self, mime: &Mime) -> bool {
-        for m in &self.mime_types {
-            if mime.type_() == m.type_() {
-                if m.subtype() == "" {
-                    return true;
-                } else {
-                    return mime.subtype() == m.subtype();
-                }
-            }
-        }
-        false
+        !in_mime_vec(mime, &self.ignored_mime_types) && in_mime_vec(mime, &self.mime_types)
     }
 
     pub fn convert_filename<T: AsRef<OsStr>>(&self, filename: T) -> OsString {
@@ -138,6 +151,7 @@ pub fn default() -> ProjectionConfig {
     }
     ProjectionConfig {
         mime_types: vec!["audio/".parse().unwrap(), "video/".parse().unwrap()],
+        ignored_mime_types: Vec::new(),
         name_mapping: Box::new(_filename_conv),
         projection_command: Box::new(_do_proj),
     }
