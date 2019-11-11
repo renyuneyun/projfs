@@ -1,5 +1,5 @@
 name: PROJection FileSystem
-version: "0.1.2"
+version: "0.1.3"
 author: renyuneyun (Rui Zhao) <renyuneyun@gmail.com>
 about: A FUSE filesystem which projects an existing directory to a new mount point -- convert specified files through a projection command.
 
