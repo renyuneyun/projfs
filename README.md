@@ -29,6 +29,27 @@ cargo run --help
 
 An example projection specification is available in `example_projection.yml`. It also corresponds to the default behaviour.
 
+# Projection Configuration
+
+An example projection configuration file is placed under `example_projection.yml`, which is the same as not specifying a projection configuration file. The detail of the schema is explained here.
+
+> The `configuration-schema.owl` file is an ontology describing the schema (i.e. the same as below). RDF/OWL may be promoted to one of the acceptable configuration file types in the future.
+
+The configuration uses YAML format. The acceptable keys are specified below. Every key is mandatory unless marked as `[optional]`.
+
+- `mime_types`: a list of strings
+    File matching mime types specified here will be converted using the `projection_command`, unless it's specified in `ignored_mime_types`.
+    Each string is either a `mime type` (e.g. `audio/ogg`), or a wildcard of mime types (e.g. `audio/*`). Specifically, shorthand of wildcard (e.g. `audio`, or `audio/`) is accepted, but not encouraged.
+- `ignored_mime_types`: [optional] a list of strings
+    The mime types specified here will not be converted.
+    The acceptable values are the same as `mime_type`.
+- `name_mapping`: a string
+    The string is the new suffix which the converted file will have. It will replace the original file suffix if any (e.g. `file1.wav` -> `file1.ogg` if `ogg` is specified here).
+- `projection_command`: a string
+    The string specifies the command used to do the conversion. It can accept two varirables, `{input}` and `{output}`: Each will be replaced with the corresponding source file path (`{input}`) and output (cache) file path (`{output}`).
+    The string will be separated by space and passed to `Command` module. That means there should not be escaped spaces (i.e. `\ `), quoted spaced (e.g. `" qwe"`), etc. Were there any needs to use them, you can write your own script and point to it from here.
+
+
 # TODO
 
 * [x] Having a default cache dir

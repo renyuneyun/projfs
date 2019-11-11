@@ -1,0 +1,363 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://purl/.org/projfs/projection-schema#"
+     xml:base="https://purl/.org/projfs/projection-schema"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:projection-schema="https://purl/.org/projfs/projection-schema#">
+    <owl:Ontology rdf:about="https://purl/.org/projfs/projection-schema">
+        <rdfs:comment xml:lang="en">This ontology illustrates the structure (schema) of the projection configuration of ProjFS project. It also provides a set of individual corresponding to the default projection.</rdfs:comment>
+        <owl:versionInfo xml:lang="en">This schema corresponds to the schema used by ProjFS v0.1.3, and is compatible with any earlier versions.</owl:versionInfo>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#key -->
+
+    <owl:AnnotationProperty rdf:about="https://purl/.org/projfs/projection-schema#key">
+        <rdfs:comment xml:lang="en">The key to be used in the configuration file.</rdfs:comment>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#hasItem -->
+
+    <owl:ObjectProperty rdf:about="https://purl/.org/projfs/projection-schema#hasItem">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:range rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#hasValue -->
+
+    <owl:ObjectProperty rdf:about="https://purl/.org/projfs/projection-schema#hasValue">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:range rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#data -->
+
+    <owl:DatatypeProperty rdf:about="https://purl/.org/projfs/projection-schema#data">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topDataProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#Config -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#Config">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasItem"/>
+                        <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                        <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#MimeTypes"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasItem"/>
+                        <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                        <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#NameMapping"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasItem"/>
+                        <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                        <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#ProjectionCommand"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasItem"/>
+                        <owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+                        <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#IgnoredMimeTypes"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasItem"/>
+                <owl:someValuesFrom rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">Class of a configuration setting. A valid configuraion should satisfy the constraints of this class.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#IgnoredMimeTypes -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#IgnoredMimeTypes">
+        <rdfs:subClassOf rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasValue"/>
+                <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#MimeType"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <key>ignored_mime_types</key>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#Item -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#Item">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasValue"/>
+                <owl:someValuesFrom rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#MimeType -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#MimeType">
+        <rdfs:subClassOf rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+        <rdfs:comment xml:lang="en">A value here should be a MIME type.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#MimeTypes -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#MimeTypes">
+        <rdfs:subClassOf rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasValue"/>
+                <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#MimeType"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <key>mime_types</key>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#NameMapping -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#NameMapping">
+        <rdfs:subClassOf rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasValue"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <key>name_mapping</key>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#ProjectionCommand -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#ProjectionCommand">
+        <rdfs:subClassOf rdf:resource="https://purl/.org/projfs/projection-schema#Item"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#hasValue"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onClass rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <key>projection_command</key>
+    </owl:Class>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#Value -->
+
+    <owl:Class rdf:about="https://purl/.org/projfs/projection-schema#Value">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://purl/.org/projfs/projection-schema#data"/>
+                <owl:cardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:cardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">This class and its subclasses resemble a particular data, with necessary annotation of extra information. This wrapper exists because datatypes don&apos;t have hierarchy or complex structure.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#accepted_mimes -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#accepted_mimes">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#MimeTypes"/>
+        <hasValue rdf:resource="https://purl/.org/projfs/projection-schema#mime_audios"/>
+        <hasValue rdf:resource="https://purl/.org/projfs/projection-schema#mime_videos"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#command -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#command">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#ProjectionCommand"/>
+        <hasValue rdf:resource="https://purl/.org/projfs/projection-schema#ffmpeg_convert"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#default_projection -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#default_projection">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#Config"/>
+        <hasItem rdf:resource="https://purl/.org/projfs/projection-schema#accepted_mimes"/>
+        <hasItem rdf:resource="https://purl/.org/projfs/projection-schema#command"/>
+        <hasItem rdf:resource="https://purl/.org/projfs/projection-schema#ignored_mimes"/>
+        <hasItem rdf:resource="https://purl/.org/projfs/projection-schema#mapping"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#ffmpeg_convert -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#ffmpeg_convert">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+        <data>ffmpeg -i {input} -vn {output}</data>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#ignored_mimes -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#ignored_mimes">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#IgnoredMimeTypes"/>
+        <hasValue rdf:resource="https://purl/.org/projfs/projection-schema#mime_audio_ogg"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#mapping -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#mapping">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#NameMapping"/>
+        <hasValue rdf:resource="https://purl/.org/projfs/projection-schema#suffix_ogg"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#mime_audio_ogg -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#mime_audio_ogg">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#MimeType"/>
+        <data>audio/ogg</data>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#mime_audios -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#mime_audios">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#MimeType"/>
+        <data>audio/</data>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#mime_videos -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#mime_videos">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#MimeType"/>
+        <data>video/</data>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://purl/.org/projfs/projection-schema#suffix_ogg -->
+
+    <owl:NamedIndividual rdf:about="https://purl/.org/projfs/projection-schema#suffix_ogg">
+        <rdf:type rdf:resource="https://purl/.org/projfs/projection-schema#Value"/>
+        <data>.ogg</data>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // General axioms
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="https://purl/.org/projfs/projection-schema#IgnoredMimeTypes"/>
+            <rdf:Description rdf:about="https://purl/.org/projfs/projection-schema#MimeTypes"/>
+            <rdf:Description rdf:about="https://purl/.org/projfs/projection-schema#NameMapping"/>
+            <rdf:Description rdf:about="https://purl/.org/projfs/projection-schema#ProjectionCommand"/>
+        </owl:members>
+    </rdf:Description>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 4.5.9.2019-02-01T07:24:44Z) https://github.com/owlcs/owlapi -->
+
