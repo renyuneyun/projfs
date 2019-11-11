@@ -1,4 +1,4 @@
-use mime_guess::Mime;
+use mime_guess::{mime, Mime};
 use serde::Deserialize;
 use std::convert::From;
 use std::ffi::{OsStr, OsString};
@@ -139,7 +139,14 @@ pub fn load(filename: &OsStr) -> Option<Box<dyn ProjectionSpecification>> {
     Some(Box::new(ProjectionConfig::from(plain_config)))
 }
 
-pub fn default() -> Box<dyn ProjectionSpecification> {
+struct DefaultConfig;
+
+impl DefaultConfig {
+    fn _should_project(mime_type: &Mime) -> bool {
+        return mime_type.type_() == mime::AUDIO && mime_type.subtype() != "ogg"
+            || mime_type.type_() == mime::VIDEO;
+    }
+
     fn _filename_conv(partial: &OsStr) -> OsString {
         let mut path_buf = PathBuf::from(partial);
         path_buf.set_extension("ogg");
@@ -158,10 +165,22 @@ pub fn default() -> Box<dyn ProjectionSpecification> {
             .expect("failed to execute process");
         cmd.wait().unwrap();
     }
-    Box::new(ProjectionConfig {
-        mime_types: vec!["audio/".parse().unwrap(), "video/".parse().unwrap()],
-        ignored_mime_types: Vec::new(),
-        name_mapping: Box::new(_filename_conv),
-        projection_command: Box::new(_do_proj),
-    })
+}
+
+impl ProjectionSpecification for DefaultConfig {
+    fn should_project(&self, mime: &Mime) -> bool {
+        DefaultConfig::_should_project(mime)
+    }
+
+    fn convert_filename(&self, filename: &OsStr) -> OsString {
+        DefaultConfig::_filename_conv(filename)
+    }
+
+    fn project(&self, input: &OsStr, output: &OsStr) {
+        DefaultConfig::_do_proj(input, output)
+    }
+}
+
+pub fn default() -> Box<dyn ProjectionSpecification> {
+    Box::new(DefaultConfig {})
 }

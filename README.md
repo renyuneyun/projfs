@@ -15,7 +15,7 @@ cargo run <source> <mountpoint>
 
 The `<mountpoint>` is where the new projected filesystem hierarchy will appear. It is (apparently) read-only.
 
-By default, the program performs the projection by using `ffmpeg` to convert every audio and video file to `ogg` file (audio).
+By default, the program performs the projection by using `ffmpeg` to convert every audio and video file to `ogg` file (audio) (unless it's `ogg` audio already).
 
 It identifies files by MIME type (using the `mime_guess` crate). All files are provided as-is except for `audio/*` and `video/*` files which are going to be projected. The command used to convert is `ffmpeg -i <original_file> -vn <output_file>`. File suffix is changed to `ogg` where applicable.
 
