@@ -1,26 +1,32 @@
 name: PROJection FileSystem
 version: "0.1.2"
 author: renyuneyun (Rui Zhao) <renyuneyun@gmail.com>
-about: Project an existing directory to a new mount point -- convert specified files through a projection command.
+about: A FUSE filesystem which projects an existing directory to a new mount point -- convert specified files through a projection command.
 
 args:
     - projection:
         short: p
         long: projection
-        value_name: FILE
-        help: Loads the projection configuration from file
+        value_name: CONFIG_FILE
+        help: Loads the projection configuration from CONFIG_FILE
         takes_value: true
     - cache:
         short: c
         long: cache
         value_name: DIRECTORY
-        help: Sets the cache directory to use
+        help: |-
+            Sets the cache directory
+            It defaults to `$XDG_CACHE_HOME/projfs/dir-related-to-SOURCE_DIR`
     - SOURCE_DIR:
-        help: Sets the source directory
+        help: |-
+            Sets the source directory
+            SOURCE_DIR is where the data (directory structure) originates
         required: true
         index: 1
     - MOUNTPOINT:
-        help: Sets the mountpoint
+        help: |-
+            Sets the mountpoint
+            MOUNTPOINT is where the projected filesystem locates
         required: true
         index: 2
 

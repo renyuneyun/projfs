@@ -1,5 +1,5 @@
 [package]
-name = "proj_fs"
+name = "projfs"
 version = "0.1.2"
 authors = ["renyuneyun (Rui ZHAO) <renyuneyun@gmail.com>"]
 edition = "2018"

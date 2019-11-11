@@ -314,7 +314,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proj_fs"
+name = "projfs"
 version = "0.1.2"
 dependencies = [
  "bimap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
