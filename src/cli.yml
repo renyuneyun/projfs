@@ -8,7 +8,9 @@ args:
         short: p
         long: projection
         value_name: CONFIG_FILE
-        help: Loads the projection configuration from CONFIG_FILE
+        help: |-
+            Loads the projection configuration from CONFIG_FILE
+            The default behaviour is to project every file with MIME type `audio/*` & `video/*` to ogg audio through ffmpeg (see the `example_projection.yml` file for detail)
         takes_value: true
     - cache:
         short: c
