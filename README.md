@@ -5,12 +5,20 @@ ProjFS is a FUSE filesystem aiming at providing a general way of doing filesyste
 
 It can provide use cases such as automatically converting audio files while keeping the original file.
 
+# Build
+
+This project is written in Rust, so just follow the standard way how a Rust application is built:
+
+```
+cargo build
+```
+
 # Usage
 
 ## Basic usage
 
 ```
-cargo run <source> <mountpoint>
+projfs <source> <mountpoint>
 ```
 
 The `<mountpoint>` is where the new projected filesystem hierarchy will appear. It is (apparently) read-only.
@@ -24,10 +32,10 @@ It identifies files by MIME type (using the `mime_guess` crate). All files are p
 Please see the help document using:
 
 ```
-cargo run --help
+projfs --help
 ```
 
-An example projection specification is available in `example_projection.yml`. It also corresponds to the default behaviour.
+An example projection specification is available in `example_projection.yml`. It also corresponds to the default behaviour. See the next section for a detailed explanation of the projection specification.
 
 # Projection Configuration
 
